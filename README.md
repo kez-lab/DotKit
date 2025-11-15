@@ -1,4 +1,3 @@
-# DotKit
 
 <p align="center">
   <img src="https://img.shields.io/badge/Kotlin-Multiplatform-blue?logo=kotlin" alt="Kotlin Multiplatform"/>
@@ -10,6 +9,13 @@ Compose Multiplatform UI를 지원하는 Kotlin Multiplatform 기반 픽셀 아�
 Android, Desktop(JVM), iOS, Web(Wasm)에서 픽셀 캔버스 작업을 위한 통합 API를 제공합니다.
 
 ## Screenshot
+
+| Screenshot 1 | Screenshot 2 | Screenshot 3 |
+|:-------------:|:-------------:|:-------------:|
+| <img width="240" src="https://github.com/user-attachments/assets/dcb95a16-fb66-42f9-8664-5459e1ba47fc" /> | <img width="240" src="https://github.com/user-attachments/assets/917d2808-59bf-4a2d-8dcb-27f560d31a7d" /> | <img width="240" src="https://github.com/user-attachments/assets/5e1dada2-2400-4c26-a1f6-46df2bb69ce5" /> |
+
+
+
 
 ## Features
 
