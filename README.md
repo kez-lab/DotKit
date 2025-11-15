@@ -44,22 +44,8 @@ Android, Desktop(JVM), iOS, Web(Wasm)에서 픽셀 캔버스 작업을 위한 �
 - Native 최적화를 위한 expect/actual 패턴
 
 ## Installation
+**Maven 배포 예정**
 
-### Module Dependencies
-
-`build.gradle.kts`에 다음을 추가하세요.
-
-```kotlin
-kotlin {
-    sourceSets {
-        val commonMain by getting {
-            dependencies {
-                implementation(project(":dotkit-core"))
-                implementation(project(":dotkit-compose"))
-            }
-        }
-    }
-}
 ```
 
 ### Platform Configuration
