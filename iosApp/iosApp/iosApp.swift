@@ -1,5 +1,5 @@
 import SwiftUI
-import SharedUI
+import sample
 
 @main
 struct ComposeApp: App {
@@ -12,7 +12,7 @@ struct ComposeApp: App {
 
 struct ContentView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
-        return MainKt.MainViewController()
+        return MainViewControllerKt.MainViewController()
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
