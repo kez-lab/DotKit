@@ -86,7 +86,7 @@ wasmJs { browser() }
 
 ```kotlin
 import androidx.compose.runtime.*
-import io.github.kez.dotkit.canvas.CanvasState
+import io.github.kez.dotkit.DotKitState
 import io.github.kez.dotkit.compose.*
 import io.github.kez.dotkit.tools.*
 
@@ -98,7 +98,7 @@ fun PixelEditor() {
     }
 
     val controller = rememberDotKitController(
-        initialState = CanvasState.create(width = 64, height = 64)
+        initialState = DotKitState.create(width = 64, height = 64)
     )
 
     DotKitCanvas(
@@ -151,12 +151,12 @@ val eyedropper = EyedropperTool()
 
 **Dependencies**: `kotlinx-coroutines-core` only
 
-#### CanvasState
+#### DotKitState
 
 불변 캔버스 상태 관리.
 
 ```kotlin
-data class CanvasState(
+data class DotKitState(
     val width: Int,
     val height: Int,
     val zoom: Float = 1f,
@@ -168,16 +168,16 @@ data class CanvasState(
 )
 
 // Factory
-CanvasState.create(width: Int = 32, height: Int = 32): CanvasState
+DotKitState.create(width: Int = 32, height: Int = 32): DotKitState
 
 // 변환
-fun withZoom(newZoom: Float): CanvasState
-fun withPan(newPan: Offset): CanvasState
-fun toggleGrid(): CanvasState
-fun addLayer(layer: Layer): CanvasState
-fun removeLayer(layerId: String): CanvasState
-fun setActiveLayer(layerId: String): CanvasState
-fun updateLayer(layerId: String, update: (Layer) -> Layer): CanvasState
+fun withZoom(newZoom: Float): DotKitState
+fun withPan(newPan: Offset): DotKitState
+fun toggleGrid(): DotKitState
+fun addLayer(layer: Layer): DotKitState
+fun removeLayer(layerId: String): DotKitState
+fun setActiveLayer(layerId: String): DotKitState
+fun updateLayer(layerId: String, update: (Layer) -> Layer): DotKitState
 fun composite(): IntArray  // 최종 합성 픽셀
 ```
 
@@ -216,9 +216,9 @@ interface Tool {
     val name: String
     val supportsPreview: Boolean
 
-    fun onDown(state: CanvasState, point: Point, color: Int): ToolState?
-    fun onMove(state: CanvasState, point: Point, color: Int, toolState: ToolState?): ToolState?
-    fun onUp(state: CanvasState, point: Point, color: Int, toolState: ToolState?): CanvasCommand?
+    fun onDown(state: DotKitState, point: Point, color: Int): ToolState?
+    fun onMove(state: DotKitState, point: Point, color: Int, toolState: ToolState?): ToolState?
+    fun onUp(state: DotKitState, point: Point, color: Int, toolState: ToolState?): CanvasCommand?
     fun getPreviewPixels(toolState: ToolState?): List<Pair<Point, Int>>
 }
 
@@ -239,15 +239,15 @@ class HistoryManager(maxHistorySize: Int = 50) {
     val canUndo: Boolean
     val canRedo: Boolean
 
-    fun execute(state: CanvasState, command: CanvasCommand): CanvasState
-    fun undo(state: CanvasState): CanvasState
-    fun redo(state: CanvasState): CanvasState
+    fun execute(state: DotKitState, command: CanvasCommand): DotKitState
+    fun undo(state: DotKitState): DotKitState
+    fun redo(state: DotKitState): DotKitState
     fun clear()
 }
 
 interface CanvasCommand {
-    fun execute(state: CanvasState): CanvasState
-    fun undo(state: CanvasState): CanvasState
+    fun execute(state: DotKitState): DotKitState
+    fun undo(state: DotKitState): DotKitState
 }
 
 // 내장 커맨드
@@ -286,10 +286,10 @@ Compose Multiplatform UI 통합 모듈
 
 ```kotlin
 class DotKitController(
-    initialState: CanvasState = CanvasState.create(),
+    initialState: DotKitState = DotKitState.create(),
     maxHistorySize: Int = 50
 ) {
-    var state: CanvasState
+    var state: DotKitState
     val canUndo: Boolean
     val canRedo: Boolean
 
@@ -335,7 +335,7 @@ class DotKitController(
 
 @Composable
 fun rememberDotKitController(
-    initialState: CanvasState = CanvasState.create(),
+    initialState: DotKitState = DotKitState.create(),
     maxHistorySize: Int = 50
 ): DotKitController
 ```
@@ -347,7 +347,7 @@ fun rememberDotKitController(
 ```kotlin
 @Composable
 fun DotKitCanvas(
-    state: CanvasState,
+    state: DotKitState,
     activeTool: Tool,
     onToolAction: (ToolAction) -> Unit,
     modifier: Modifier = Modifier
@@ -432,7 +432,7 @@ CanvasCommand
     ↓
 HistoryManager.execute
     ↓
-CanvasState (new)
+DotKitState (new)
     ↓
 Compose Recomposition
     ↓
@@ -528,24 +528,35 @@ DotKit/
 
 **Android**
 ```bash
+# 디버그 빌드
 ./gradlew :sample:assembleDebug
+# 기기에 설치
 ./gradlew :sample:installDebug
 ```
 
-**Desktop**
+**Desktop (JVM)**
 ```bash
+# Desktop 앱 실행
 ./gradlew :sample:run
 ```
 
-**iOS** (macOS)
+**iOS** (macOS required)
 ```bash
+# iOS 바이너리 빌드
 ./gradlew :sample:iosX64Binaries
-# Xcode로 열기
+# Xcode에서 iosApp 프로젝트 열기
 ```
 
 **Web (Wasm)**
 ```bash
+# Development 모드 (빠른 빌드, 디버깅용)
 ./gradlew :sample:wasmJsBrowserDevelopmentRun
+
+# Production 모드 (최적화 빌드)
+./gradlew :sample:wasmJsBrowserProductionRun
+
+# 빌드만 하기 (실행 없이)
+./gradlew :sample:wasmJsBrowserDevelopmentWebpack
 ```
 
 ### Publishing Modules
@@ -564,13 +575,13 @@ class CustomTool : Tool {
     override val name = "Custom"
     override val supportsPreview = true
 
-    override fun onDown(state: CanvasState, point: Point, color: Int): ToolState? =
+    override fun onDown(state: DotKitState, point: Point, color: Int): ToolState? =
         DefaultToolState(point, point, color)
 
-    override fun onMove(state: CanvasState, point: Point, color: Int, toolState: ToolState?) =
+    override fun onMove(state: DotKitState, point: Point, color: Int, toolState: ToolState?) =
         (toolState as? DefaultToolState)?.copy(currentPoint = point)
 
-    override fun onUp(state: CanvasState, point: Point, color: Int, toolState: ToolState?) =
+    override fun onUp(state: DotKitState, point: Point, color: Int, toolState: ToolState?) =
         null // 커스텀 CanvasCommand 반환
 
     override fun getPreviewPixels(toolState: ToolState?) = emptyList<Pair<Point, Int>>()
@@ -587,7 +598,7 @@ class FloodFillCommand(
 ) : CanvasCommand {
     private lateinit var previousPixels: Map<Point, Int>
 
-    override fun execute(state: CanvasState): CanvasState {
+    override fun execute(state: DotKitState): DotKitState {
         val layer = state.layerManager.findLayer(layerId) ?: return state
         val filled = floodFill(layer, startPoint, fillColor)
         previousPixels = filled
@@ -596,7 +607,7 @@ class FloodFillCommand(
         }
     }
 
-    override fun undo(state: CanvasState): CanvasState =
+    override fun undo(state: DotKitState): DotKitState =
         state.updateLayer(layerId) { l ->
             l.apply { previousPixels.forEach { (p, c) -> setPixel(p.x, p.y, c) } }
         }

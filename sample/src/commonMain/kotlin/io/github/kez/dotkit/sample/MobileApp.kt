@@ -9,7 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import io.github.kez.dotkit.canvas.CanvasState
+import io.github.kez.dotkit.DotKitState
 import io.github.kez.dotkit.compose.DotKitCanvas
 import io.github.kez.dotkit.compose.ToolAction
 import io.github.kez.dotkit.compose.rememberDotKitController
@@ -40,7 +40,7 @@ fun MobileApp() {
     var showSaveDialog by remember { mutableStateOf(false) }
 
     val controller = rememberDotKitController(
-        initialState = CanvasState.create(width = 64, height = 80).withZoom(16f)
+        initialState = DotKitState.create(width = 64, height = 80).withZoom(16f)
     )
 
     LaunchedEffect(Unit) {

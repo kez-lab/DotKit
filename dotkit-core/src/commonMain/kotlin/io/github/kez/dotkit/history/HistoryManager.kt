@@ -1,6 +1,6 @@
 package io.github.kez.dotkit.history
 
-import io.github.kez.dotkit.canvas.CanvasState
+import io.github.kez.dotkit.DotKitState
 
 /**
  * 실행 취소/다시 실행을 관리하는 히스토리 매니저
@@ -44,7 +44,7 @@ class HistoryManager(
      * @param command 실행할 명령
      * @return 명령 실행 후의 새로운 캔버스 상태
      */
-    fun execute(state: CanvasState, command: CanvasCommand): CanvasState {
+    fun execute(state: DotKitState, command: CanvasCommand): DotKitState {
         val newState = command.execute(state)
 
         // 실행 취소 스택에 추가
@@ -67,7 +67,7 @@ class HistoryManager(
      * @param state 현재 캔버스 상태
      * @return 실행 취소 후의 캔버스 상태
      */
-    fun undo(state: CanvasState): CanvasState {
+    fun undo(state: DotKitState): DotKitState {
         if (!canUndo) return state
 
         val command = undoStack.removeAt(undoStack.lastIndex)
@@ -85,7 +85,7 @@ class HistoryManager(
      * @param state 현재 캔버스 상태
      * @return 다시 실행 후의 캔버스 상태
      */
-    fun redo(state: CanvasState): CanvasState {
+    fun redo(state: DotKitState): DotKitState {
         if (!canRedo) return state
 
         val command = redoStack.removeAt(redoStack.lastIndex)

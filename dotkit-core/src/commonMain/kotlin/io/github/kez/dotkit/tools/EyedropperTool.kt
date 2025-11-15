@@ -1,6 +1,6 @@
 package io.github.kez.dotkit.tools
 
-import io.github.kez.dotkit.canvas.CanvasState
+import io.github.kez.dotkit.DotKitState
 import io.github.kez.dotkit.common.Point
 import io.github.kez.dotkit.history.CanvasCommand
 
@@ -27,7 +27,7 @@ class EyedropperTool : Tool {
         val pickedColor: Int? = null  // 선택된 색상
     ) : ToolState
 
-    override fun onDown(state: CanvasState, point: Point, color: Int): ToolState {
+    override fun onDown(state: DotKitState, point: Point, color: Int): ToolState {
         val layer = state.activeLayer
 
         // 레이어가 없거나 범위를 벗어난 경우
@@ -57,7 +57,7 @@ class EyedropperTool : Tool {
         )
     }
 
-    override fun onMove(state: CanvasState, point: Point, color: Int, toolState: ToolState?): ToolState? {
+    override fun onMove(state: DotKitState, point: Point, color: Int, toolState: ToolState?): ToolState? {
         // 드래그 중에도 색상을 계속 업데이트
         val layer = state.activeLayer ?: return toolState
 
@@ -82,7 +82,7 @@ class EyedropperTool : Tool {
         )
     }
 
-    override fun onUp(state: CanvasState, point: Point, color: Int, toolState: ToolState?): CanvasCommand? {
+    override fun onUp(state: DotKitState, point: Point, color: Int, toolState: ToolState?): CanvasCommand? {
         // 스포이드는 캔버스를 변경하지 않으므로 커맨드를 반환하지 않습니다
         // UI 레이어에서 toolState의 pickedColor를 사용하여 색상을 업데이트해야 합니다
         return null

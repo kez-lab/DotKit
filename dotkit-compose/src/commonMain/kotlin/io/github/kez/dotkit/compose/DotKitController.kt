@@ -1,13 +1,12 @@
 package io.github.kez.dotkit.compose
 
 import androidx.compose.runtime.*
-import io.github.kez.dotkit.canvas.CanvasState
+import io.github.kez.dotkit.DotKitState
 import io.github.kez.dotkit.common.Offset
 import io.github.kez.dotkit.common.Point
 import io.github.kez.dotkit.history.CanvasCommand
 import io.github.kez.dotkit.history.HistoryManager
 import io.github.kez.dotkit.layers.Layer
-import io.github.kez.dotkit.tools.Tool
 
 /**
  * 캔버스 컨트롤러
@@ -19,7 +18,7 @@ import io.github.kez.dotkit.tools.Tool
  * @param maxHistorySize 최대 히스토리 크기 (기본 50)
  */
 class DotKitController(
-    initialState: CanvasState = CanvasState.create(),
+    initialState: DotKitState = DotKitState.create(),
     maxHistorySize: Int = 50
 ) {
     private val historyManager = HistoryManager(maxHistorySize)
@@ -298,7 +297,7 @@ class DotKitController(
  */
 @Composable
 fun rememberDotKitController(
-    initialState: CanvasState = CanvasState.create(),
+    initialState: DotKitState = DotKitState.create(),
     maxHistorySize: Int = 50
 ): DotKitController {
     return remember(initialState, maxHistorySize) {

@@ -1,6 +1,6 @@
 package io.github.kez.dotkit.tools
 
-import io.github.kez.dotkit.canvas.CanvasState
+import io.github.kez.dotkit.DotKitState
 import io.github.kez.dotkit.common.Point
 import io.github.kez.dotkit.history.CanvasCommand
 
@@ -21,7 +21,7 @@ interface Tool {
      * @param color 사용할 색상
      * @return 생성된 도구 상태 (상태가 있는 도구의 경우)
      */
-    fun onDown(state: CanvasState, point: Point, color: Int): ToolState?
+    fun onDown(state: DotKitState, point: Point, color: Int): ToolState?
 
     /**
      * 도구 이동 (드래그 중)
@@ -32,7 +32,7 @@ interface Tool {
      * @param toolState 이전 도구 상태
      * @return 업데이트된 도구 상태
      */
-    fun onMove(state: CanvasState, point: Point, color: Int, toolState: ToolState?): ToolState?
+    fun onMove(state: DotKitState, point: Point, color: Int, toolState: ToolState?): ToolState?
 
     /**
      * 도구 종료 (마우스 업 또는 터치 종료)
@@ -43,7 +43,7 @@ interface Tool {
      * @param toolState 최종 도구 상태
      * @return 실행할 커맨드 (없으면 null)
      */
-    fun onUp(state: CanvasState, point: Point, color: Int, toolState: ToolState?): CanvasCommand?
+    fun onUp(state: DotKitState, point: Point, color: Int, toolState: ToolState?): CanvasCommand?
 
     /**
      * 도구가 프리뷰를 지원하는지 여부

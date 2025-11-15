@@ -1,6 +1,6 @@
 package io.github.kez.dotkit.history
 
-import io.github.kez.dotkit.canvas.CanvasState
+import io.github.kez.dotkit.DotKitState
 import io.github.kez.dotkit.common.Point
 import io.github.kez.dotkit.layers.Layer
 
@@ -14,14 +14,14 @@ sealed interface CanvasCommand {
      * @param state 현재 캔버스 상태
      * @return 명령 실행 후의 새로운 캔버스 상태
      */
-    fun execute(state: CanvasState): CanvasState
+    fun execute(state: DotKitState): DotKitState
 
     /**
      * 명령 취소
      * @param state 현재 캔버스 상태
      * @return 명령 취소 후의 캔버스 상태
      */
-    fun undo(state: CanvasState): CanvasState
+    fun undo(state: DotKitState): DotKitState
 }
 
 /**
@@ -34,7 +34,7 @@ data class DrawPixelCommand(
     val color: Int,
     private val previousColor: Int? = null
 ) : CanvasCommand {
-    override fun execute(state: CanvasState): CanvasState {
+    override fun execute(state: DotKitState): DotKitState {
         val layer = state.layerManager.findLayer(layerId) ?: return state
 
         // 이전 색상 저장 (undo를 위해)
@@ -57,7 +57,7 @@ data class DrawPixelCommand(
         }
     }
 
-    override fun undo(state: CanvasState): CanvasState {
+    override fun undo(state: DotKitState): DotKitState {
         if (previousColor == null) return state
 
         return state.updateLayer(layerId) { layer ->
@@ -77,7 +77,7 @@ class DrawPixelsCommand(
     data class PixelPaint(val x: Int, val y: Int, val color: Int)
     private var backups: IntArray? = null
 
-    override fun execute(state: CanvasState): CanvasState {
+    override fun execute(state: DotKitState): DotKitState {
         val layer = state.layerManager.findLayer(layerId) ?: return state
         val w = layer.width; val h = layer.height
         val old = IntArray(paints.size) { i ->
@@ -90,7 +90,7 @@ class DrawPixelsCommand(
             }
         }
     }
-    override fun undo(state: CanvasState): CanvasState {
+    override fun undo(state: DotKitState): DotKitState {
         val layer = state.layerManager.findLayer(layerId) ?: return state
         val old = backups ?: return state
         val w = layer.width; val h = layer.height
@@ -115,7 +115,7 @@ data class DrawLineCommand(
     val color: Int,
     private val affectedPixels: List<Pair<Point, Int>>? = null
 ) : CanvasCommand {
-    override fun execute(state: CanvasState): CanvasState {
+    override fun execute(state: DotKitState): DotKitState {
         val layer = state.layerManager.findLayer(layerId) ?: return state
 
         // Bresenham 알고리즘으로 라인상의 모든 픽셀 계산
@@ -148,7 +148,7 @@ data class DrawLineCommand(
         }
     }
 
-    override fun undo(state: CanvasState): CanvasState {
+    override fun undo(state: DotKitState): DotKitState {
         if (affectedPixels == null) return state
 
         return state.updateLayer(layerId) { layer ->
@@ -205,11 +205,11 @@ data class DrawLineCommand(
 data class AddLayerCommand(
     val layer: Layer
 ) : CanvasCommand {
-    override fun execute(state: CanvasState): CanvasState {
+    override fun execute(state: DotKitState): DotKitState {
         return state.addLayer(layer)
     }
 
-    override fun undo(state: CanvasState): CanvasState {
+    override fun undo(state: DotKitState): DotKitState {
         return state.removeLayer(layer.id)
     }
 }
@@ -222,7 +222,7 @@ data class RemoveLayerCommand(
     private val removedLayer: Layer? = null,
     private val layerIndex: Int? = null
 ) : CanvasCommand {
-    override fun execute(state: CanvasState): CanvasState {
+    override fun execute(state: DotKitState): DotKitState {
         val layer = state.layerManager.findLayer(layerId) ?: return state
         val index = state.layerManager.indexOf(layerId)
 
@@ -236,7 +236,7 @@ data class RemoveLayerCommand(
         }
     }
 
-    override fun undo(state: CanvasState): CanvasState {
+    override fun undo(state: DotKitState): DotKitState {
         if (removedLayer == null || layerIndex == null) return state
 
         val newLayerManager = state.layerManager.insertLayer(layerIndex, removedLayer)
@@ -255,7 +255,7 @@ data class ModifyLayerCommand(
     val modification: (Layer) -> Layer,
     private val originalLayer: Layer? = null
 ) : CanvasCommand {
-    override fun execute(state: CanvasState): CanvasState {
+    override fun execute(state: DotKitState): DotKitState {
         val layer = state.layerManager.findLayer(layerId) ?: return state
 
         val original = originalLayer ?: layer
@@ -269,7 +269,7 @@ data class ModifyLayerCommand(
         }
     }
 
-    override fun undo(state: CanvasState): CanvasState {
+    override fun undo(state: DotKitState): DotKitState {
         if (originalLayer == null) return state
 
         return state.updateLayer(layerId) { originalLayer }
@@ -282,13 +282,13 @@ data class ModifyLayerCommand(
 data class CompositeCommand(
     val commands: List<CanvasCommand>
 ) : CanvasCommand {
-    override fun execute(state: CanvasState): CanvasState {
+    override fun execute(state: DotKitState): DotKitState {
         return commands.fold(state) { currentState, command ->
             command.execute(currentState)
         }
     }
 
-    override fun undo(state: CanvasState): CanvasState {
+    override fun undo(state: DotKitState): DotKitState {
         return commands.reversed().fold(state) { currentState, command ->
             command.undo(currentState)
         }

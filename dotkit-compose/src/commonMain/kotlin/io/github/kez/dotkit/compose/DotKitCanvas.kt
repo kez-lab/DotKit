@@ -18,7 +18,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
-import io.github.kez.dotkit.canvas.CanvasState
+import io.github.kez.dotkit.DotKitState
 import io.github.kez.dotkit.common.Point
 import io.github.kez.dotkit.tools.Tool
 import io.github.kez.dotkit.tools.ToolState
@@ -36,7 +36,7 @@ import io.github.kez.dotkit.tools.ToolState
  */
 @Composable
 fun DotKitCanvas(
-    state: CanvasState,
+    state: DotKitState,
     activeTool: Tool,
     onToolAction: (ToolAction) -> Unit,
     modifier: Modifier = Modifier
@@ -105,7 +105,7 @@ fun DotKitCanvas(
  * 캔버스 렌더링
  */
 private fun DrawScope.drawCanvas(
-    state: CanvasState,
+    state: DotKitState,
     toolState: ToolState?,
     activeTool: Tool
 ) {
@@ -176,7 +176,7 @@ private fun DrawScope.drawCanvas(
 /**
  * 격자 그리기
  */
-private fun DrawScope.drawGrid(state: CanvasState) {
+private fun DrawScope.drawGrid(state: DotKitState) {
     val pixelSize = state.zoom
     val gridColor = Color(state.gridColor)
 
@@ -208,7 +208,7 @@ private fun DrawScope.drawGrid(state: CanvasState) {
  */
 private fun screenToCanvas(
     screenOffset: Offset,
-    state: CanvasState
+    state: DotKitState
 ): Point? {
     val x = ((screenOffset.x - state.pan.x) / state.zoom).toInt()
     val y = ((screenOffset.y - state.pan.y) / state.zoom).toInt()

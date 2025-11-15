@@ -1,11 +1,11 @@
-package io.github.kez.dotkit.canvas
+package io.github.kez.dotkit
 
 import io.github.kez.dotkit.common.Offset
 import io.github.kez.dotkit.layers.Layer
 import io.github.kez.dotkit.layers.LayerManager
 
 /**
- * 캔버스의 불변 상태를 나타내는 데이터 클래스
+ * DotKit 캔버스의 불변 상태를 나타내는 데이터 클래스
  *
  * @param width 캔버스 너비 (픽셀)
  * @param height 캔버스 높이 (픽셀)
@@ -19,11 +19,11 @@ import io.github.kez.dotkit.layers.LayerManager
  * @param primaryColor 기본 색상 (ARGB)
  * @param secondaryColor 보조 색상 (ARGB)
  */
-data class CanvasState(
+data class DotKitState(
     val width: Int,
     val height: Int,
     val zoom: Float = 1f,
-    val pan: Offset = Offset.ZERO,
+    val pan: Offset = Offset.Companion.ZERO,
     val gridVisible: Boolean = true,
     val gridSnap: Boolean = false,
     val gridColor: Int = 0x4D808080, // 30% 불투명도의 회색
@@ -53,7 +53,7 @@ data class CanvasState(
     /**
      * 줌 변경
      */
-    fun withZoom(newZoom: Float): CanvasState {
+    fun withZoom(newZoom: Float): DotKitState {
         require(newZoom > 0) { "Zoom must be positive" }
         return copy(zoom = newZoom.coerceIn(MIN_ZOOM, MAX_ZOOM))
     }
@@ -61,28 +61,28 @@ data class CanvasState(
     /**
      * 패닝 변경
      */
-    fun withPan(newPan: Offset): CanvasState {
+    fun withPan(newPan: Offset): DotKitState {
         return copy(pan = newPan)
     }
 
     /**
      * 격자 표시 토글
      */
-    fun toggleGrid(): CanvasState {
+    fun toggleGrid(): DotKitState {
         return copy(gridVisible = !gridVisible)
     }
 
     /**
      * 격자 스냅 토글
      */
-    fun toggleGridSnap(): CanvasState {
+    fun toggleGridSnap(): DotKitState {
         return copy(gridSnap = !gridSnap)
     }
 
     /**
      * 레이어 추가
      */
-    fun addLayer(layer: Layer): CanvasState {
+    fun addLayer(layer: Layer): DotKitState {
         return copy(
             layerManager = layerManager.addLayer(layer),
             activeLayerId = layer.id
@@ -92,7 +92,7 @@ data class CanvasState(
     /**
      * 레이어 제거
      */
-    fun removeLayer(layerId: String): CanvasState {
+    fun removeLayer(layerId: String): DotKitState {
         val newLayerManager = layerManager.removeLayer(layerId)
         val newActiveLayerId = if (layerId == activeLayerId) {
             newLayerManager.getLayers().firstOrNull()?.id
@@ -108,7 +108,7 @@ data class CanvasState(
     /**
      * 활성 레이어 변경
      */
-    fun setActiveLayer(layerId: String): CanvasState {
+    fun setActiveLayer(layerId: String): DotKitState {
         require(layerManager.findLayer(layerId) != null) {
             "Layer with id $layerId not found"
         }
@@ -118,42 +118,42 @@ data class CanvasState(
     /**
      * 레이어 업데이트
      */
-    fun updateLayer(layerId: String, update: (Layer) -> Layer): CanvasState {
+    fun updateLayer(layerId: String, update: (Layer) -> Layer): DotKitState {
         return copy(layerManager = layerManager.updateLayer(layerId, update))
     }
 
     /**
      * 레이어 이동
      */
-    fun moveLayer(fromIndex: Int, toIndex: Int): CanvasState {
+    fun moveLayer(fromIndex: Int, toIndex: Int): DotKitState {
         return copy(layerManager = layerManager.moveLayer(fromIndex, toIndex))
     }
 
     /**
      * 레이어 복제
      */
-    fun duplicateLayer(layerId: String): CanvasState {
+    fun duplicateLayer(layerId: String): DotKitState {
         return copy(layerManager = layerManager.duplicateLayer(layerId))
     }
 
     /**
      * 기본 색상 변경
      */
-    fun setPrimaryColor(color: Int): CanvasState {
+    fun setPrimaryColor(color: Int): DotKitState {
         return copy(primaryColor = color)
     }
 
     /**
      * 보조 색상 변경
      */
-    fun setSecondaryColor(color: Int): CanvasState {
+    fun setSecondaryColor(color: Int): DotKitState {
         return copy(secondaryColor = color)
     }
 
     /**
      * 기본/보조 색상 교환
      */
-    fun swapColors(): CanvasState {
+    fun swapColors(): DotKitState {
         return copy(
             primaryColor = secondaryColor,
             secondaryColor = primaryColor
@@ -167,7 +167,7 @@ data class CanvasState(
         return layerManager.composite(width, height)
     }
 
-    companion object {
+    companion object Companion {
         const val MIN_ZOOM = 0.1f
         const val MAX_ZOOM = 32f
 
@@ -177,8 +177,8 @@ data class CanvasState(
         fun create(
             width: Int = 32,
             height: Int = 32
-        ): CanvasState {
-            val backgroundLayer = Layer.create(
+        ): DotKitState {
+            val backgroundLayer = Layer.Companion.create(
                 width = width,
                 height = height,
                 name = "Background"
@@ -186,7 +186,7 @@ data class CanvasState(
                 fill(0xFFFFFFFF.toInt()) // 흰색 배경
             }
 
-            val drawingLayer = Layer.create(
+            val drawingLayer = Layer.Companion.create(
                 width = width,
                 height = height,
                 name = "Layer 1"
@@ -196,7 +196,7 @@ data class CanvasState(
                 .addLayer(backgroundLayer)
                 .addLayer(drawingLayer)
 
-            return CanvasState(
+            return DotKitState(
                 width = width,
                 height = height,
                 layerManager = layerManager,

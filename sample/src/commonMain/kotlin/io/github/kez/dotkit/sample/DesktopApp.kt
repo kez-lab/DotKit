@@ -9,7 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import io.github.kez.dotkit.canvas.CanvasState
+import io.github.kez.dotkit.DotKitState
 import io.github.kez.dotkit.compose.DotKitCanvas
 import io.github.kez.dotkit.compose.ToolAction
 import io.github.kez.dotkit.compose.rememberDotKitController
@@ -26,7 +26,7 @@ fun DesktopApp() {
     var brushSize by remember { mutableStateOf(1) }
     var currentTool by remember(brushSize) { mutableStateOf<Tool>(BrushTool(size = brushSize)) }
     val controller = rememberDotKitController(
-        initialState = CanvasState.create(width = 32, height = 32).withZoom(16f)
+        initialState = DotKitState.create(width = 32, height = 32).withZoom(16f)
     )
 
     MaterialTheme {

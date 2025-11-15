@@ -1,6 +1,6 @@
 package io.github.kez.dotkit.tools
 
-import io.github.kez.dotkit.canvas.CanvasState
+import io.github.kez.dotkit.DotKitState
 import io.github.kez.dotkit.common.Point
 import io.github.kez.dotkit.history.CanvasCommand
 import io.github.kez.dotkit.history.CompositeCommand
@@ -22,7 +22,7 @@ class EraserTool(
     // 투명 색상 (알파 = 0)
     private val transparentColor = 0x00000000
 
-    override fun onDown(state: CanvasState, point: Point, color: Int): ToolState {
+    override fun onDown(state: DotKitState, point: Point, color: Int): ToolState {
         val layer = state.activeLayer ?: return DefaultToolState(point, point, transparentColor)
 
         // 시작 픽셀의 이전 색상 저장
@@ -40,7 +40,7 @@ class EraserTool(
         )
     }
 
-    override fun onMove(state: CanvasState, point: Point, color: Int, toolState: ToolState?): ToolState? {
+    override fun onMove(state: DotKitState, point: Point, color: Int, toolState: ToolState?): ToolState? {
         val currentState = toolState as? DefaultToolState ?: return null
         val layer = state.activeLayer ?: return currentState
 
@@ -59,7 +59,7 @@ class EraserTool(
         )
     }
 
-    override fun onUp(state: CanvasState, point: Point, color: Int, toolState: ToolState?): CanvasCommand? {
+    override fun onUp(state: DotKitState, point: Point, color: Int, toolState: ToolState?): CanvasCommand? {
         val finalState = toolState as? DefaultToolState ?: return null
         val layerId = state.activeLayerId ?: return null
 
