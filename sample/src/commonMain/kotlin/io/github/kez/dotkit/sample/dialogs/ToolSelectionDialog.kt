@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.kez.dotkit.tools.*
+import kotlin.to
 
 /**
  * 도구 선택 다이얼로그
@@ -31,7 +32,8 @@ fun ToolSelectionDialog(
                     ShapeTool(ShapeType.RECTANGLE, FillMode.STROKE, size = brushSize) to "⬜ 사각형",
                     ShapeTool(ShapeType.CIRCLE, FillMode.STROKE, size = brushSize) to "⭕ 원",
                     EraserTool(size = brushSize) to "🧹 지우개",
-                    EyedropperTool() to "💧 스포이드"
+                    EyedropperTool() to "💧 스포이드",
+                    FillTool() to "🎨 채우기"
                 )
 
                 tools.forEach { (tool, name) ->

@@ -100,6 +100,9 @@ data class Layer(
     }
 
     companion object {
+        // 전역 카운터로 고유 ID 보장
+        private var idCounter = 0L
+
         /**
          * 새 빈 레이어 생성
          */
@@ -119,9 +122,12 @@ data class Layer(
 
         /**
          * 고유 ID 생성
+         * 랜덤 값 + 카운터로 충돌 방지
          */
         private fun generateId(): String {
-            return "layer_${kotlin.random.Random.nextLong()}_${(0..999).random()}"
+            val random = kotlin.random.Random.nextLong()
+            val counter = idCounter++
+            return "layer_${random}_${counter}"
         }
     }
 }

@@ -102,9 +102,17 @@ class LayerManager(
     fun duplicateLayer(layerId: String): LayerManager {
         val layer = findLayer(layerId) ?: return this
         val index = indexOf(layerId)
-        val duplicated = layer.copy(
-            id = "layer_${kotlin.random.Random.nextLong()}_${(0..999).random()}",
+        // Layer.create()의 generateId()를 사용하도록 수정
+        val duplicated = Layer.create(
+            width = layer.width,
+            height = layer.height,
             name = "${layer.name} Copy"
+        ).also {
+            it.setPixels(layer.getPixelsCopy())
+        }.copy(
+            opacity = layer.opacity,
+            visible = layer.visible,
+            locked = layer.locked
         )
         return insertLayer(index + 1, duplicated)
     }
@@ -142,6 +150,8 @@ class LayerManager(
      * 두 픽셀을 알파 블렌딩
      */
     private fun blendPixels(dst: Int, src: Int, srcAlpha: Float): Int {
+        if (srcAlpha <= 0f) return dst
+
         val dstA = ((dst ushr 24) and 0xFF) / 255f
         val dstR = (dst ushr 16) and 0xFF
         val dstG = (dst ushr 8) and 0xFF
@@ -152,6 +162,11 @@ class LayerManager(
         val srcB = src and 0xFF
 
         val outA = srcAlpha + dstA * (1f - srcAlpha)
+
+        if (outA < 0.001f) {
+            return 0
+        }
+
         val outR = (srcR * srcAlpha + dstR * dstA * (1f - srcAlpha)) / outA
         val outG = (srcG * srcAlpha + dstG * dstA * (1f - srcAlpha)) / outA
         val outB = (srcB * srcAlpha + dstB * dstA * (1f - srcAlpha)) / outA

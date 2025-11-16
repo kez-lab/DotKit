@@ -122,12 +122,9 @@ data class DrawLineCommand(
         val pixels = getLinePixels(from, to)
 
         // 이전 색상 저장
-        val affected = if (affectedPixels == null) {
-            pixels.filter { layer.isInBounds(it.x, it.y) }
+        val affected = affectedPixels
+            ?: pixels.filter { layer.isInBounds(it.x, it.y) }
                 .map { point -> point to layer.getPixel(point.x, point.y) }
-        } else {
-            affectedPixels
-        }
 
         val newState = state.updateLayer(layerId) { layer ->
             layer.copy().also { newLayer ->
@@ -291,6 +288,34 @@ data class CompositeCommand(
     override fun undo(state: DotKitState): DotKitState {
         return commands.reversed().fold(state) { currentState, command ->
             command.undo(currentState)
+        }
+    }
+}
+
+/**
+ * Fill 커맨드 (Flood Fill)
+ * 연결된 영역을 채웁니다.
+ */
+data class FillCommand(
+    val layerId: String,
+    val affectedPixels: List<Pair<Point, Int>>, // Point to previousColor
+    val fillColor: Int
+) : CanvasCommand {
+    override fun execute(state: DotKitState): DotKitState {
+        return state.updateLayer(layerId) { layer ->
+            affectedPixels.forEach { (point, _) ->
+                layer.setPixel(point.x, point.y, fillColor)
+            }
+            layer
+        }
+    }
+
+    override fun undo(state: DotKitState): DotKitState {
+        return state.updateLayer(layerId) { layer ->
+            affectedPixels.forEach { (point, previousColor) ->
+                layer.setPixel(point.x, point.y, previousColor)
+            }
+            layer
         }
     }
 }
