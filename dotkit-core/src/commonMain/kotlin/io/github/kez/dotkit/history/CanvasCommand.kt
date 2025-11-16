@@ -303,19 +303,21 @@ data class FillCommand(
 ) : CanvasCommand {
     override fun execute(state: DotKitState): DotKitState {
         return state.updateLayer(layerId) { layer ->
-            affectedPixels.forEach { (point, _) ->
-                layer.setPixel(point.x, point.y, fillColor)
+            layer.copy().also { newLayer ->
+                affectedPixels.forEach { (point, _) ->
+                    newLayer.setPixel(point.x, point.y, fillColor)
+                }
             }
-            layer
         }
     }
 
     override fun undo(state: DotKitState): DotKitState {
         return state.updateLayer(layerId) { layer ->
-            affectedPixels.forEach { (point, previousColor) ->
-                layer.setPixel(point.x, point.y, previousColor)
+            layer.copy().also { newLayer ->
+                affectedPixels.forEach { (point, previousColor) ->
+                    newLayer.setPixel(point.x, point.y, previousColor)
+                }
             }
-            layer
         }
     }
 }

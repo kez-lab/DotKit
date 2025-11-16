@@ -86,10 +86,16 @@ class FillTool : Tool {
             affectedPixels.add(Point(x, y) to targetColor)
 
             // 4방향으로 확장 (상하좌우)
-            stack.addLast(Point(x + 1, y))  // 오른쪽
-            stack.addLast(Point(x - 1, y))  // 왼쪽
-            stack.addLast(Point(x, y + 1))  // 아래
-            stack.addLast(Point(x, y - 1))  // 위
+            fun tryAddNeighbor(nx: Int, ny: Int) {
+                if (nx >= 0 && nx < width && ny >= 0 && ny < height && !visited[ny][nx]) {
+                    stack.addLast(Point(nx, ny))
+                }
+            }
+
+            tryAddNeighbor(x + 1, y)  // 오른쪽
+            tryAddNeighbor(x - 1, y)  // 왼쪽
+            tryAddNeighbor(x, y + 1)  // 아래
+            tryAddNeighbor(x, y - 1)  // 위
         }
 
         return affectedPixels
