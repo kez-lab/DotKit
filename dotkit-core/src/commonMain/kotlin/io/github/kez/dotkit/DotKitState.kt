@@ -95,7 +95,21 @@ data class DotKitState(
     fun removeLayer(layerId: String): DotKitState {
         val newLayerManager = layerManager.removeLayer(layerId)
         val newActiveLayerId = if (layerId == activeLayerId) {
-            newLayerManager.getLayers().firstOrNull()?.id
+            // 삭제된 레이어의 인덱스 확인
+            val index = layerManager.indexOf(layerId)
+            val layers = newLayerManager.getLayers()
+            
+            if (layers.isEmpty()) {
+                null
+            } else {
+                // 이전 인덱스가 유효하면 그 위치(원래는 다음 레이어였던 것), 아니면 마지막 레이어
+                // 또는 바로 위/아래 레이어 선택 로직
+                // 여기서는 인덱스를 유지하려고 노력함 (즉, 아래 레이어 선택)
+                // index는 삭제 전 인덱스이므로, 삭제 후에는 index 위치에 원래 index+1 레이어가 옴.
+                // 만약 index가 마지막이었다면, index-1 (새로운 마지막)을 선택해야 함.
+                val newIndex = index.coerceAtMost(layers.lastIndex)
+                layers[newIndex].id
+            }
         } else {
             activeLayerId
         }
@@ -178,7 +192,7 @@ data class DotKitState(
             width: Int = 32,
             height: Int = 32
         ): DotKitState {
-            val backgroundLayer = Layer.Companion.create(
+            val backgroundLayer = Layer.create(
                 width = width,
                 height = height,
                 name = "Background"
@@ -186,7 +200,7 @@ data class DotKitState(
                 fill(0xFFFFFFFF.toInt()) // 흰색 배경
             }
 
-            val drawingLayer = Layer.Companion.create(
+            val drawingLayer = Layer.create(
                 width = width,
                 height = height,
                 name = "Layer 1"

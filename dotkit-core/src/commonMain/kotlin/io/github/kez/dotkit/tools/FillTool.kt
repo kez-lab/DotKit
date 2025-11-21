@@ -58,46 +58,69 @@ class FillTool : Tool {
         layer: io.github.kez.dotkit.layers.Layer,
         start: Point,
         targetColor: Int
-    ): List<Pair<Point, Int>> {
+    ): IntArray {
         val width = layer.width
         val height = layer.height
-        val affectedPixels = mutableListOf<Pair<Point, Int>>()
-        val visited = Array(height) { BooleanArray(width) }
-        val stack = ArrayDeque<Point>()
+        // 예상 크기: 전체의 1/4 정도로 시작
+        var affectedPixels = IntArray(width * height / 4 * 3) 
+        var count = 0
+        
+        val visited = BooleanArray(width * height)
+        // Stack using IntArray: [x, y, x, y...]
+        val stack = IntArray(width * height * 2)
+        var stackTop = 0
 
-        stack.addLast(start)
+        // Push start
+        stack[stackTop++] = start.x
+        stack[stackTop++] = start.y
 
-        while (stack.isNotEmpty()) {
-            val current = stack.removeLast()
-            val x = current.x
-            val y = current.y
+        while (stackTop > 0) {
+            val y = stack[--stackTop]
+            val x = stack[--stackTop]
 
-            // 경계 체크
+            // 경계 체크 (이미 넣을 때 체크하지만 안전을 위해)
             if (x < 0 || x >= width || y < 0 || y >= height) continue
 
+            val index = y * width + x
             // 이미 방문했으면 스킵
-            if (visited[y][x]) continue
+            if (visited[index]) continue
 
             // 색상이 다르면 스킵
             if (layer.getPixel(x, y) != targetColor) continue
 
             // 현재 픽셀 처리
-            visited[y][x] = true
-            affectedPixels.add(Point(x, y) to targetColor)
+            visited[index] = true
+            
+            // Ensure capacity
+            if (count + 3 > affectedPixels.size) {
+                val newSize = affectedPixels.size * 2
+                affectedPixels = affectedPixels.copyOf(newSize)
+            }
+            
+            affectedPixels[count++] = x
+            affectedPixels[count++] = y
+            affectedPixels[count++] = targetColor
 
             // 4방향으로 확장 (상하좌우)
-            fun tryAddNeighbor(nx: Int, ny: Int) {
-                if (nx >= 0 && nx < width && ny >= 0 && ny < height && !visited[ny][nx]) {
-                    stack.addLast(Point(nx, ny))
-                }
+            // Push neighbors
+            if (x + 1 < width && !visited[y * width + (x + 1)]) {
+                stack[stackTop++] = x + 1
+                stack[stackTop++] = y
             }
-
-            tryAddNeighbor(x + 1, y)  // 오른쪽
-            tryAddNeighbor(x - 1, y)  // 왼쪽
-            tryAddNeighbor(x, y + 1)  // 아래
-            tryAddNeighbor(x, y - 1)  // 위
+            if (x - 1 >= 0 && !visited[y * width + (x - 1)]) {
+                stack[stackTop++] = x - 1
+                stack[stackTop++] = y
+            }
+            if (y + 1 < height && !visited[(y + 1) * width + x]) {
+                stack[stackTop++] = x
+                stack[stackTop++] = y + 1
+            }
+            if (y - 1 >= 0 && !visited[(y - 1) * width + x]) {
+                stack[stackTop++] = x
+                stack[stackTop++] = y - 1
+            }
         }
 
-        return affectedPixels
+        return affectedPixels.copyOf(count)
     }
 }

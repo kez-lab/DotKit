@@ -3,9 +3,9 @@ package io.github.kez.dotkit.tools
 import io.github.kez.dotkit.DotKitState
 import io.github.kez.dotkit.common.Point
 import io.github.kez.dotkit.history.CanvasCommand
-import io.github.kez.dotkit.history.CompositeCommand
-import io.github.kez.dotkit.history.DrawPixelCommand
-import kotlin.math.*
+import io.github.kez.dotkit.history.DrawPixelsCommand
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 /**
  * 도형 타입
@@ -46,9 +46,10 @@ class ShapeTool(
 
         // 시작 픽셀의 이전 색상 저장
         val affectedPixels = if (layer.isInBounds(point.x, point.y)) {
-            listOf(point to layer.getPixel(point.x, point.y))
+            val oldColor = layer.getPixel(point.x, point.y)
+            intArrayOf(point.x, point.y, oldColor)
         } else {
-            emptyList()
+            IntArray(0)
         }
 
         return DefaultToolState(
@@ -67,14 +68,43 @@ class ShapeTool(
         val shapePixels = calculateShapePixels(currentState.startPoint, point)
 
         // 새로 영향받는 픽셀의 이전 색상 저장
-        val newAffectedPixels = shapePixels
-            .filter { layer.isInBounds(it.x, it.y) }
-            .filter { p -> currentState.affectedPixels.none { it.first == p } }
-            .map { p -> p to layer.getPixel(p.x, p.y) }
+        val currentAffected = currentState.affectedPixels
+        val newAffectedList = IntArray(shapePixels.size * 3)
+        var count = 0
+
+        for (p in shapePixels) {
+            if (layer.isInBounds(p.x, p.y)) {
+                // Check if already affected
+                var exists = false
+                var i = 0
+                while (i < currentAffected.size) {
+                    if (currentAffected[i] == p.x && currentAffected[i + 1] == p.y) {
+                        exists = true
+                        break
+                    }
+                    i += 3
+                }
+                
+                if (!exists) {
+                    newAffectedList[count++] = p.x
+                    newAffectedList[count++] = p.y
+                    newAffectedList[count++] = layer.getPixel(p.x, p.y)
+                }
+            }
+        }
+
+        val combined = if (count > 0) {
+            val result = IntArray(currentAffected.size + count)
+            currentAffected.copyInto(result, 0, 0, currentAffected.size)
+            newAffectedList.copyInto(result, currentAffected.size, 0, count)
+            result
+        } else {
+            currentAffected
+        }
 
         return currentState.copy(
             currentPoint = point,
-            affectedPixels = currentState.affectedPixels + newAffectedPixels
+            affectedPixels = combined
         )
     }
 
@@ -86,16 +116,31 @@ class ShapeTool(
         val shapePixels = calculateShapePixels(finalState.startPoint, point)
 
         // 각 픽셀에 대한 DrawPixelCommand 생성
-        val commands = shapePixels.mapNotNull { pixel ->
-            val previousColor = finalState.affectedPixels.find { it.first == pixel }?.second
+        val pixels = calculateShapePixels(finalState.startPoint, point)
+        
+        if (pixels.isEmpty()) return null
+
+        // DrawPixelsCommand용 IntArray 생성 [x, y, color, ...]
+        val pixelData = IntArray(pixels.size * 3)
+        var idx = 0
+        
+        for (pixel in pixels) {
             if (state.activeLayer?.isInBounds(pixel.x, pixel.y) == true) {
-                DrawPixelCommand(layerId, pixel.x, pixel.y, color, previousColor)
-            } else {
-                null
+                pixelData[idx++] = pixel.x
+                pixelData[idx++] = pixel.y
+                pixelData[idx++] = color
             }
         }
+        
+        val finalPixelData = if (idx < pixelData.size) {
+            pixelData.copyOf(idx)
+        } else {
+            pixelData
+        }
 
-        return if (commands.isEmpty()) null else CompositeCommand(commands)
+        if (finalPixelData.isEmpty()) return null
+
+        return DrawPixelsCommand(layerId, finalPixelData)
     }
 
     override fun getPreviewPixels(toolState: ToolState?): List<Pair<Point, Int>> {

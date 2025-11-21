@@ -128,6 +128,9 @@ private fun DrawScope.drawCanvas(
     val compositePixels = state.composite()
     val pixelSize = state.zoom
 
+    // Optimize rendering by grouping pixels by color
+    val pixelsByColor = mutableMapOf<Int, MutableList<Offset>>()
+
     for (y in 0 until state.height) {
         for (x in 0 until state.width) {
             val index = y * state.width + x
@@ -135,19 +138,26 @@ private fun DrawScope.drawCanvas(
                 val color = compositePixels[index]
                 val alpha = (color shr 24) and 0xFF
 
-                // 투명 픽셀은 건너뛰기
+                // Skip transparent pixels
                 if (alpha == 0) continue
 
-                val screenX = state.pan.x + x * pixelSize
-                val screenY = state.pan.y + y * pixelSize
+                val screenX = state.pan.x + x * pixelSize + pixelSize / 2 // Center of the pixel
+                val screenY = state.pan.y + y * pixelSize + pixelSize / 2 // Center of the pixel
 
-                drawRect(
-                    color = Color(color),
-                    topLeft = Offset(screenX, screenY),
-                    size = Size(pixelSize, pixelSize)
-                )
+                pixelsByColor.getOrPut(color) { mutableListOf() }.add(Offset(screenX, screenY))
             }
         }
+    }
+
+    // Batch draw calls
+    pixelsByColor.forEach { (color, points) ->
+        drawPoints(
+            points = points,
+            pointMode = androidx.compose.ui.graphics.PointMode.Points,
+            color = Color(color),
+            strokeWidth = pixelSize,
+            cap = androidx.compose.ui.graphics.StrokeCap.Butt
+        )
     }
 
     if (toolState != null && activeTool.supportsPreview) {

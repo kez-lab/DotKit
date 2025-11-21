@@ -10,8 +10,8 @@ import io.github.kez.dotkit.DotKitState
 class HistoryManager(
     private val maxHistorySize: Int = 50
 ) {
-    private val undoStack = mutableListOf<CanvasCommand>()
-    private val redoStack = mutableListOf<CanvasCommand>()
+    private val undoStack = ArrayDeque<CanvasCommand>(maxHistorySize)
+    private val redoStack = ArrayDeque<CanvasCommand>(maxHistorySize)
 
     /**
      * 실행 취소 가능 여부
@@ -48,11 +48,11 @@ class HistoryManager(
         val newState = command.execute(state)
 
         // 실행 취소 스택에 추가
-        undoStack.add(command)
+        undoStack.addLast(command)
 
         // 최대 크기 제한
         if (undoStack.size > maxHistorySize) {
-            undoStack.removeAt(0)
+            undoStack.removeFirst()
         }
 
         // 새 명령 실행 시 다시 실행 스택 초기화
@@ -70,11 +70,11 @@ class HistoryManager(
     fun undo(state: DotKitState): DotKitState {
         if (!canUndo) return state
 
-        val command = undoStack.removeAt(undoStack.lastIndex)
+        val command = undoStack.removeLast()
         val newState = command.undo(state)
 
         // 다시 실행 스택에 추가
-        redoStack.add(command)
+        redoStack.addLast(command)
 
         return newState
     }
@@ -88,11 +88,11 @@ class HistoryManager(
     fun redo(state: DotKitState): DotKitState {
         if (!canRedo) return state
 
-        val command = redoStack.removeAt(redoStack.lastIndex)
+        val command = redoStack.removeLast()
         val newState = command.execute(state)
 
         // 실행 취소 스택에 추가
-        undoStack.add(command)
+        undoStack.addLast(command)
 
         return newState
     }

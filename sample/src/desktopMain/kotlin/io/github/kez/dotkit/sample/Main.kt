@@ -11,6 +11,6 @@ fun main() = application {
         title = "DotKit Sample",
         state = rememberWindowState(width = 1200.dp, height = 800.dp)
     ) {
-        App()
+        DesktopApp()
     }
 }
