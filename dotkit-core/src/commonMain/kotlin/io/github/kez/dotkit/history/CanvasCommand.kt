@@ -396,11 +396,11 @@ data class FillCommand(
             layer.copy().also { newLayer ->
                 var i = 0
                 while (i < affectedPixels.size) {
-                    val x = affectedPixels[i]
-                    val y = affectedPixels[i+1]
-                    // Skip color (i+2) as we are filling with new color
+                    val x = affectedPixels[i++]
+                    val y = affectedPixels[i++]
+                    // Skip color (i++) as we are filling with new color
+                    i++ // skip oldColor
                     newLayer.setPixel(x, y, fillColor)
-                    i += 3
                 }
             }
         }

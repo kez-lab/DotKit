@@ -204,9 +204,9 @@ class LayerManager(
         
         if (outA < 1f) return 0
 
-        val outR = (srcR * srcAlpha * 255f + dstR * dstA * invAlpha) / outA
-        val outG = (srcG * srcAlpha * 255f + dstG * dstA * invAlpha) / outA
-        val outB = (srcB * srcAlpha * 255f + dstB * dstA * invAlpha) / outA
+        val outR = (srcR * srcAlpha + dstR * dstA / 255f * invAlpha) / (outA / 255f)
+        val outG = (srcG * srcAlpha + dstG * dstA / 255f * invAlpha) / (outA / 255f)
+        val outB = (srcB * srcAlpha + dstB * dstA / 255f * invAlpha) / (outA / 255f)
 
         return (outA.toInt().coerceIn(0, 255) shl 24) or
                (outR.toInt().coerceIn(0, 255) shl 16) or
