@@ -1,3 +1,4 @@
+<img width="2752" height="1536" alt="Gemini_Generated_Image_ys89swys89swys89" src="https://github.com/user-attachments/assets/5f963591-02d0-41a0-a5b9-c040c39204a3" />
 
 <p align="center">
   <img src="https://img.shields.io/badge/Kotlin-Multiplatform-blue?logo=kotlin" alt="Kotlin Multiplatform"/>
@@ -9,11 +10,7 @@ Compose Multiplatform UI를 지원하는 Kotlin Multiplatform 기반 픽셀 아�
 Android, Desktop(JVM), iOS, Web(Wasm)에서 픽셀 캔버스 작업을 위한 통합 API를 제공합니다.
 
 ## Screenshot
-
-| iOS | Desktop | Web |
-|:--:|:--:|:--:|
-| <img width="250" src="https://github.com/user-attachments/assets/b062b6ee-4566-4a00-ac52-8ec83bf6645d" /> | <img width="250" src="https://github.com/user-attachments/assets/8c2ce194-07fa-4a59-8af6-2ca1cc670e9b" /> | <img width="250" src="https://github.com/user-attachments/assets/c59be363-b173-432a-aece-473da794b07e" /> |
-
+![Screenshot](https://github.com/user-attachments/assets/5451977e-9661-410f-b24c-03755469f3b0)
 
 | SampleScreenshot | Demo Video |
 |:-------------:|:-------------:|
