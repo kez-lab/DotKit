@@ -310,6 +310,41 @@ fun EnhancedControlPanel(
         ) {
             Text("💾 저장")
         }
+
+        // JSON 불러오기
+        var showJsonDialog by remember { mutableStateOf(false) }
+        Button(
+            onClick = { showJsonDialog = true },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.tertiary
+            )
+        ) {
+            Text("📥 JSON")
+        }
+
+        if (showJsonDialog) {
+            JsonImportDialog(
+                onDismiss = { showJsonDialog = false },
+                onImport = { json ->
+                    try {
+                        val newState = io.github.kez.dotkit.converter.DotKitJsonConverter.parse(json)
+                        // Controller needs a way to set state directly or we use a command?
+                        // DotKitController.state is mutable but private set.
+                        // We need a method in DotKitController to load state.
+                        // For now, let's assume we can add a method or use a hack.
+                        // Wait, I can add a method to DotKitController.
+                        // Let's modify DotKitController first to allow loading state.
+                        // Or I can just use a custom command? No, replacing state is drastic.
+                        // I will add `loadState` to DotKitController.
+                        showJsonDialog = false
+                    } catch (e: Exception) {
+                        // Show error?
+                        println("Error parsing JSON: ${e.message}")
+                    }
+                },
+                controller = controller // Pass controller to call loadState
+            )
+        }
     }
 
     if (showSaveDialog) {
@@ -329,6 +364,82 @@ fun EnhancedControlPanel(
             }
         )
     }
+}
+
+@Composable
+fun JsonImportDialog(
+    onDismiss: () -> Unit,
+    onImport: (String) -> Unit,
+    controller: io.github.kez.dotkit.compose.DotKitController
+) {
+    var jsonText by remember { mutableStateOf("") }
+    var errorText by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("JSON 불러오기") },
+        text = {
+            Column {
+                Text("DotKit JSON 문자열을 입력하세요:", style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = jsonText,
+                    onValueChange = { jsonText = it },
+                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                    placeholder = { Text("{\"width\": 16, \"height\": 16, ...}") }
+                )
+                if (errorText != null) {
+                    Text(errorText!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                Spacer(Modifier.height(8.dp))
+                // AI 예시 버튼
+                Button(
+                    onClick = {
+                        jsonText = """
+                        {
+                          "width": 8,
+                          "height": 8,
+                          "palette": ["#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
+                          "data": [
+                            [0, 0, 1, 1, 2, 2, 3, 3],
+                            [0, 0, 1, 1, 2, 2, 3, 3],
+                            [4, 4, 4, 4, 4, 4, 4, 4],
+                            [4, 4, 4, 4, 4, 4, 4, 4],
+                            [0, 1, 0, 1, 0, 1, 0, 1],
+                            [2, 3, 2, 3, 2, 3, 2, 3],
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1]
+                          ]
+                        }
+                        """.trimIndent()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("🤖 AI 생성 예시 (8x8)")
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    try {
+                        val newState = io.github.kez.dotkit.converter.DotKitJsonConverter.parse(jsonText)
+                        controller.loadState(newState)
+                        onDismiss()
+                    } catch (e: Exception) {
+                        errorText = "파싱 오류: ${e.message}"
+                    }
+                }
+            ) {
+                Text("불러오기")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소")
+            }
+        }
+    )
 }
 
 /**
