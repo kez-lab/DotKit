@@ -137,11 +137,6 @@ class LayerManager(
             // 현재 Layer 구조상 오프셋은 없으므로 크기만 확인
             if (layer.width == width && layer.height == height) {
                 val layerPixels = layer.getPixelsCopy() // Note: This copies, but access is faster. Ideally we'd access internal buffer.
-                // Since we can't access internal buffer easily without breaking encapsulation, we'll stick to getPixel for now
-                // OR, we can assume getPixelsCopy is expensive and just loop.
-                // Let's optimize the loop to avoid getPixel bounds check overhead if possible,
-                // but Layer.getPixel does check.
-                // Best we can do here without changing Layer API is optimize the blending math.
                 
                 for (i in 0 until size) {
                     val srcColor = layerPixels[i]
