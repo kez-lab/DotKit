@@ -24,6 +24,7 @@ Android, Desktop(JVM), iOS, Web(Wasm)에서 픽셀 캔버스 작업을 위한 �
 - **LineTool**: Bresenham 알고리즘 기반의 픽셀 정밀 직선
 - **ShapeTool**: 사각형/원 도형(채우기/스트로크 모드)
 - **EraserTool**: 투명 픽셀로 지우기(사이즈 조절)
+- **FillTool**: 닫힌 영역을 선택 색상으로 채우기 (Flood Fill)
 - **EyedropperTool**: 캔버스 픽셀에서 색상 스포이드
 
 ### Layer System
@@ -42,6 +43,11 @@ Android, Desktop(JVM), iOS, Web(Wasm)에서 픽셀 캔버스 작업을 위한 �
 - 플랫폼별 PNG 내보내기 구현
 - Web은 Data URL(Base64) 제공
 - Native 최적화를 위한 expect/actual 패턴
+
+### Server-Driven UI & AI Integration
+- **JSON State Loading**: JSON 포맷으로 캔버스 상태(픽셀, 레이어)를 완벽하게 복원
+- **AI Pixel Art**: AI가 생성한 픽셀 아트 데이터를 JSON으로 변환하여 즉시 편집 가능
+- **Lightweight Parser**: 외부 의존성 없는 자체 JSON 파서 내장
 
 ## Installation
 **Maven 배포 예정**
@@ -138,6 +144,13 @@ val eraser = EraserTool(size = 2)
 
 // 스포이드
 val eyedropper = EyedropperTool()
+
+// 채우기
+val fill = FillTool()
+
+// JSON 로드
+val newState = DotKitJsonConverter.parse(jsonString)
+controller.loadState(newState)
 ```
 
 ## API Reference
@@ -269,6 +282,16 @@ expect class ImageExporter {
 // - wasm: HTML5 Canvas API
 ```
 
+#### DotKitJsonConverter
+
+JSON 문자열을 파싱하여 `DotKitState`로 변환합니다. 외부 라이브러리 의존성 없이 자체 구현된 파서를 사용합니다.
+
+```kotlin
+object DotKitJsonConverter {
+    fun parse(json: String): DotKitState
+}
+```
+
 ### dotkit-compose Module
 
 Compose Multiplatform UI 통합 모듈
@@ -328,6 +351,7 @@ class DotKitController(
     // 유틸
     fun clear()
     fun resize(newWidth: Int, newHeight: Int)
+    fun loadState(newState: DotKitState)
 }
 
 @Composable
@@ -382,110 +406,9 @@ expect class ZoomPanHandler {
 - ios: UIPinch/UIPan
 - wasm: Pointer/Wheel 이벤트
 
-## Architecture
+## Architecture & Performance
 
-### Design Patterns
-
-**Immutable State Pattern**
-```
-모든 상태 변환은 copy()로 새로운 인스턴스 반환
-- 예측 가능한 상태 전이
-- Undo/Redo 구현 용이
-- 기본적으로 스레드 안전
-```
-
-**Command Pattern**
-```
-모든 작업은 CanvasCommand
-- execute(): 적용
-- undo(): 되돌리기
-- 복합 작업 조합 용이
-```
-
-**Strategy Pattern (Tools)**
-```
-Tool 인터페이스로 런타임 도구 전환
-- 독립 구현
-- 손쉬운 확장
-- 무상태 로직 구성 가능
-```
-
-**Composite Pattern (Layers)**
-```
-LayerManager가 레이어 계층 관리
-- 알파 블렌딩 합성
-- Z-Order 관리
-- 복잡도 캡슐화
-```
-
-### State Flow
-
-```
-User Input
-    ↓
-Tool.onDown/onMove/onUp
-    ↓
-CanvasCommand
-    ↓
-HistoryManager.execute
-    ↓
-DotKitState (new)
-    ↓
-Compose Recomposition
-    ↓
-DotKitCanvas Render
-```
-
-### Module Dependencies
-
-```
-sample (Android/Desktop/iOS/Wasm)
-    ↓
-dotkit-compose (UI)
-    ↓
-dotkit-core (Engine)
-    ↓
-kotlinx-coroutines-core
-```
-
-## Performance Characteristics
-
-| 연산 | 시간복잡도 | 공간복잡도 |
-|-----|-----------|-----------|
-| 픽셀 그리기 | O(1) | O(1) |
-| 브러시 스트로크 | O(n) | Undo용 O(n) |
-| 레이어 합성 | O(w × h × layers) | O(w × h) |
-| Undo/Redo | O(1) | O(history) |
-| 줌/팬 | O(1) | O(1) |
-
-**최적화**
-- 보이는 레이어만 합성
-- 커맨드는 델타만 저장
-- 캐시 효율 좋은 `IntArray` 픽셀 버퍼
-- 그리드는 `zoom >= 4f`에서만 렌더
-
-## Algorithm Implementations
-
-### Bresenham Line
-LineTool/BrushTool에서 사용.
-
-```kotlin
-private fun interpolatePixels(from: Point, to: Point): List<Point>
-```
-
-### Midpoint Circle
-ShapeTool 원 그리기에서 사용.
-
-```kotlin
-private fun drawCircleStroke(start: Point, end: Point): List<Point>
-```
-
-### Alpha Blending
-표준 over 연산자.
-
-```kotlin
-fun composite(width: Int, height: Int): IntArray
-```
+Detailed information about the internal architecture, design patterns, and performance characteristics can be found in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Platform Support
 
@@ -632,11 +555,7 @@ class CustomLayerManager : LayerManager() {
 
 ## Contributing
 
-- Kotlin 코딩 컨벤션 준수
-- 모든 테스트 통과
-- 신규 기능에 테스트 포함
-- 공개 API KDoc 작성
-- 플랫폼별 코드는 expect/actual 패턴 사용
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
