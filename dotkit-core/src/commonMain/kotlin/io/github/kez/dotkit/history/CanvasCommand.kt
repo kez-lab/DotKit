@@ -162,9 +162,6 @@ class DrawPixelsCommand(
 /**
  * 라인 그리기 명령 (Bresenham 알고리즘)
  */
-/**
- * 라인 그리기 명령 (Bresenham 알고리즘)
- */
 data class DrawLineCommand(
     val layerId: String,
     val from: Point,
