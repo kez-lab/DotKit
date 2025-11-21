@@ -102,11 +102,7 @@ data class DotKitState(
             if (layers.isEmpty()) {
                 null
             } else {
-                // 이전 인덱스가 유효하면 그 위치(원래는 다음 레이어였던 것), 아니면 마지막 레이어
-                // 또는 바로 위/아래 레이어 선택 로직
-                // 여기서는 인덱스를 유지하려고 노력함 (즉, 아래 레이어 선택)
-                // index는 삭제 전 인덱스이므로, 삭제 후에는 index 위치에 원래 index+1 레이어가 옴.
-                // 만약 index가 마지막이었다면, index-1 (새로운 마지막)을 선택해야 함.
+                // Select the layer at the same index, or the last layer if out of bounds
                 val newIndex = index.coerceAtMost(layers.lastIndex)
                 layers[newIndex].id
             }
