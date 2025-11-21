@@ -121,10 +121,6 @@ class LayerManager(
      * 모든 레이어를 합성하여 단일 픽셀 배열 생성
      * 하위 레이어부터 상위 레이어 순으로 알파 블렌딩
      */
-    /**
-     * 모든 레이어를 합성하여 단일 픽셀 배열 생성
-     * 하위 레이어부터 상위 레이어 순으로 알파 블렌딩
-     */
     fun composite(width: Int, height: Int): IntArray {
         val result = IntArray(width * height)
         val size = width * height
