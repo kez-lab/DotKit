@@ -217,6 +217,14 @@ class DotKitController(
     }
 
     /**
+     * 상태 불러오기 (JSON Import 등)
+     */
+    fun loadState(newState: DotKitState) {
+        state = newState
+        historyManager.clear() // 히스토리 초기화
+    }
+
+    /**
      * 캔버스 크기 변경
      */
     fun resize(newWidth: Int, newHeight: Int) {
@@ -228,15 +236,23 @@ class DotKitController(
                 name = oldLayer.name
             )
 
-            // 기존 픽셀 복사 (가능한 만큼)
+            // 기존 픽셀 복사 (메모리 블록 복사로 최적화)
+            val oldPixels = oldLayer.getPixelsCopy()
+            val newPixels = IntArray(newWidth * newHeight)
+
             val minWidth = minOf(oldLayer.width, newWidth)
             val minHeight = minOf(oldLayer.height, newHeight)
 
             for (y in 0 until minHeight) {
-                for (x in 0 until minWidth) {
-                    newLayer.setPixel(x, y, oldLayer.getPixel(x, y))
-                }
+                oldPixels.copyInto(
+                    destination = newPixels,
+                    destinationOffset = y * newWidth,
+                    startIndex = y * oldLayer.width,
+                    endIndex = (y * oldLayer.width) + minWidth
+                )
             }
+
+            newLayer.setPixels(newPixels)
 
             newLayer.copy(
                 opacity = oldLayer.opacity,
@@ -245,11 +261,8 @@ class DotKitController(
             )
         }
 
-        // 새 레이어 매니저 생성
-        var newLayerManager = io.github.kez.dotkit.layers.LayerManager()
-        for (layer in newLayers) {
-            newLayerManager = newLayerManager.addLayer(layer)
-        }
+        // 새 레이어 매니저 생성 (한 번에 리스트로 생성하여 O(N) 최적화)
+        val newLayerManager = io.github.kez.dotkit.layers.LayerManager(newLayers)
 
         state = state.copy(
             width = newWidth,

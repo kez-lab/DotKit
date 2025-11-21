@@ -13,7 +13,6 @@ import io.github.kez.dotkit.DotKitState
 import io.github.kez.dotkit.compose.DotKitCanvas
 import io.github.kez.dotkit.compose.ToolAction
 import io.github.kez.dotkit.compose.rememberDotKitController
-import io.github.kez.dotkit.sample.command.AndroidDroidStamp
 import io.github.kez.dotkit.sample.dialogs.*
 import io.github.kez.dotkit.tools.*
 
@@ -42,18 +41,6 @@ fun MobileApp() {
     val controller = rememberDotKitController(
         initialState = DotKitState.create(width = 64, height = 80).withZoom(16f)
     )
-
-    LaunchedEffect(Unit) {
-        val active = controller.state.activeLayerId ?: return@LaunchedEffect
-        controller.execute(
-            AndroidDroidStamp.buildCommand(
-                originX = 1,
-                originY = 10,
-                scale = 1,
-                layerId = active
-            )
-        )
-    }
 
     MaterialTheme {
         Scaffold(
@@ -145,7 +132,7 @@ fun MobileApp() {
                 onLayersClick = { showLayerDialog = true },
                 onGridToggle = { controller.toggleGrid() },
                 onClear = { controller.clear() },
-                onSave = { showSaveDialog = true }
+                onSave = { showSaveDialog = true },
             )
         }
 

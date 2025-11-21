@@ -102,9 +102,17 @@ class LayerManager(
     fun duplicateLayer(layerId: String): LayerManager {
         val layer = findLayer(layerId) ?: return this
         val index = indexOf(layerId)
-        val duplicated = layer.copy(
-            id = "layer_${kotlin.random.Random.nextLong()}_${(0..999).random()}",
+        // Layer.create()의 generateId()를 사용하도록 수정
+        val duplicated = Layer.create(
+            width = layer.width,
+            height = layer.height,
             name = "${layer.name} Copy"
+        ).also {
+            it.setPixels(layer.getPixelsCopy())
+        }.copy(
+            opacity = layer.opacity,
+            visible = layer.visible,
+            locked = layer.locked
         )
         return insertLayer(index + 1, duplicated)
     }
@@ -115,20 +123,45 @@ class LayerManager(
      */
     fun composite(width: Int, height: Int): IntArray {
         val result = IntArray(width * height)
+        val size = width * height
 
         // 배경부터 전경까지 순서대로 합성
         for (layer in layers) {
             if (!layer.visible) continue
 
-            for (y in 0 until height) {
-                for (x in 0 until width) {
-                    if (layer.isInBounds(x, y)) {
-                        val srcColor = layer.getPixel(x, y)
-                        val srcAlpha = ((srcColor ushr 24) and 0xFF) / 255f * layer.opacity
+            // 레이어 크기가 캔버스 크기와 같고 오프셋이 없는 경우 (일반적인 경우) 최적화
+            // 현재 Layer 구조상 오프셋은 없으므로 크기만 확인
+            if (layer.width == width && layer.height == height) {
+                val layerPixels = layer.getPixelsCopy() // Note: This copies, but access is faster. Ideally we'd access internal buffer.
+                
+                for (i in 0 until size) {
+                    val srcColor = layerPixels[i]
+                    val srcAlpha = (srcColor ushr 24) and 0xFF
+                    
+                    if (srcAlpha == 0) continue
+                    
+                    // If fully opaque, just overwrite (unless layer opacity < 1f)
+                    if (srcAlpha == 255 && layer.opacity >= 1f) {
+                        result[i] = srcColor
+                    } else {
+                        val finalAlpha = srcAlpha / 255f * layer.opacity
+                        if (finalAlpha > 0) {
+                            result[i] = blendPixels(result[i], srcColor, finalAlpha)
+                        }
+                    }
+                }
+            } else {
+                // 크기가 다른 경우 (기존 로직 유지하되 블렌딩 최적화)
+                for (y in 0 until height) {
+                    for (x in 0 until width) {
+                        if (layer.isInBounds(x, y)) {
+                            val srcColor = layer.getPixel(x, y)
+                            val srcAlpha = ((srcColor ushr 24) and 0xFF) / 255f * layer.opacity
 
-                        if (srcAlpha > 0) {
-                            val index = y * width + x
-                            result[index] = blendPixels(result[index], srcColor, srcAlpha)
+                            if (srcAlpha > 0) {
+                                val index = y * width + x
+                                result[index] = blendPixels(result[index], srcColor, srcAlpha)
+                            }
                         }
                     }
                 }
@@ -139,10 +172,19 @@ class LayerManager(
     }
 
     /**
-     * 두 픽셀을 알파 블렌딩
+     * 두 픽셀을 알파 블렌딩 (최적화됨)
      */
     private fun blendPixels(dst: Int, src: Int, srcAlpha: Float): Int {
-        val dstA = ((dst ushr 24) and 0xFF) / 255f
+        if (srcAlpha <= 0f) return dst
+        if (srcAlpha >= 1f) return src
+
+        // Fast integer approximation could be used, but for correctness we stick to float for now
+        // but optimized to reduce bit shifting overhead if possible.
+        // Actually, standard alpha blending: out = src * alpha + dst * (1 - alpha)
+        
+        val invAlpha = 1f - srcAlpha
+        
+        val dstA = (dst ushr 24) and 0xFF
         val dstR = (dst ushr 16) and 0xFF
         val dstG = (dst ushr 8) and 0xFF
         val dstB = dst and 0xFF
@@ -151,14 +193,24 @@ class LayerManager(
         val srcG = (src ushr 8) and 0xFF
         val srcB = src and 0xFF
 
-        val outA = srcAlpha + dstA * (1f - srcAlpha)
-        val outR = (srcR * srcAlpha + dstR * dstA * (1f - srcAlpha)) / outA
-        val outG = (srcG * srcAlpha + dstG * dstA * (1f - srcAlpha)) / outA
-        val outB = (srcB * srcAlpha + dstB * dstA * (1f - srcAlpha)) / outA
+        // Alpha composition
+        // outA = srcA + dstA * (1 - srcA)
+        // Here srcAlpha is already (srcA * layerOpacity) / 255 normalized to 0..1
+        
+        // We need to be careful. The srcAlpha passed in is the effective alpha of the source pixel.
+        // The dst alpha is 0..255.
+        
+        val outA = srcAlpha * 255f + dstA * invAlpha
+        
+        if (outA < 1f) return 0
 
-        return ((outA * 255).toInt() shl 24) or
-               (outR.toInt() shl 16) or
-               (outG.toInt() shl 8) or
-               outB.toInt()
+        val outR = (srcR * srcAlpha + dstR * dstA / 255f * invAlpha) / (outA / 255f)
+        val outG = (srcG * srcAlpha + dstG * dstA / 255f * invAlpha) / (outA / 255f)
+        val outB = (srcB * srcAlpha + dstB * dstA / 255f * invAlpha) / (outA / 255f)
+
+        return (outA.toInt().coerceIn(0, 255) shl 24) or
+               (outR.toInt().coerceIn(0, 255) shl 16) or
+               (outG.toInt().coerceIn(0, 255) shl 8) or
+               outB.toInt().coerceIn(0, 255)
     }
 }

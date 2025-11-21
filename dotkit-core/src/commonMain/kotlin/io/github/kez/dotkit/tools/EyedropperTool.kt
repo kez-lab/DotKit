@@ -23,25 +23,16 @@ class EyedropperTool : Tool {
         override val startPoint: Point,
         override val currentPoint: Point,
         override val color: Int,
-        override val affectedPixels: List<Pair<Point, Int>> = emptyList(),
-        val pickedColor: Int? = null  // 선택된 색상
+        override val affectedPixels: IntArray = IntArray(0),
+        val pickedColor: Int? = null,  // 선택된 색상
+        val cachedComposite: IntArray? = null // 합성된 캔버스 캐시
     ) : ToolState
 
     override fun onDown(state: DotKitState, point: Point, color: Int): ToolState {
-        val layer = state.activeLayer
-
-        // 레이어가 없거나 범위를 벗어난 경우
-        if (layer == null || !layer.isInBounds(point.x, point.y)) {
-            return EyedropperState(
-                startPoint = point,
-                currentPoint = point,
-                color = color,
-                pickedColor = null
-            )
-        }
-
         // 합성된 캔버스에서 색상 가져오기 (모든 레이어 합성)
+        // 드래그 중 재사용을 위해 여기서 한 번만 계산
         val compositePixels = state.composite()
+        
         val index = point.y * state.width + point.x
         val pickedColor = if (index in compositePixels.indices) {
             compositePixels[index]
@@ -53,20 +44,18 @@ class EyedropperTool : Tool {
             startPoint = point,
             currentPoint = point,
             color = color,
-            pickedColor = pickedColor
+            pickedColor = pickedColor,
+            cachedComposite = compositePixels
         )
     }
 
     override fun onMove(state: DotKitState, point: Point, color: Int, toolState: ToolState?): ToolState? {
         // 드래그 중에도 색상을 계속 업데이트
-        val layer = state.activeLayer ?: return toolState
-
-        if (!layer.isInBounds(point.x, point.y)) {
-            return toolState
-        }
-
-        // 합성된 캔버스에서 색상 가져오기
-        val compositePixels = state.composite()
+        val currentState = toolState as? EyedropperState ?: return null
+        
+        // 캐시된 합성 데이터 사용
+        val compositePixels = currentState.cachedComposite ?: state.composite()
+        
         val index = point.y * state.width + point.x
         val pickedColor = if (index in compositePixels.indices) {
             compositePixels[index]
@@ -74,11 +63,10 @@ class EyedropperTool : Tool {
             null
         }
 
-        return EyedropperState(
-            startPoint = (toolState as? EyedropperState)?.startPoint ?: point,
+        return currentState.copy(
             currentPoint = point,
-            color = color,
-            pickedColor = pickedColor
+            pickedColor = pickedColor,
+            cachedComposite = compositePixels
         )
     }
 

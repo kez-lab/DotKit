@@ -31,7 +31,8 @@ fun ToolSelectionDialog(
                     ShapeTool(ShapeType.RECTANGLE, FillMode.STROKE, size = brushSize) to "⬜ 사각형",
                     ShapeTool(ShapeType.CIRCLE, FillMode.STROKE, size = brushSize) to "⭕ 원",
                     EraserTool(size = brushSize) to "🧹 지우개",
-                    EyedropperTool() to "💧 스포이드"
+                    EyedropperTool() to "💧 스포이드",
+                    FillTool() to "🎨 채우기"
                 )
 
                 tools.forEach { (tool, name) ->

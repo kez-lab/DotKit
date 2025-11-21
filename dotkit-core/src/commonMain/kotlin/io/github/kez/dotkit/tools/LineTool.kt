@@ -3,8 +3,7 @@ package io.github.kez.dotkit.tools
 import io.github.kez.dotkit.DotKitState
 import io.github.kez.dotkit.common.Point
 import io.github.kez.dotkit.history.CanvasCommand
-import io.github.kez.dotkit.history.CompositeCommand
-import io.github.kez.dotkit.history.DrawPixelCommand
+import io.github.kez.dotkit.history.DrawPixelsCommand
 
 /**
  * 직선 도구
@@ -23,9 +22,10 @@ class LineTool(
 
         // 시작 픽셀의 이전 색상 저장
         val affectedPixels = if (layer.isInBounds(point.x, point.y)) {
-            listOf(point to layer.getPixel(point.x, point.y))
+            val oldColor = layer.getPixel(point.x, point.y)
+            intArrayOf(point.x, point.y, oldColor)
         } else {
-            emptyList()
+            IntArray(0)
         }
 
         return DefaultToolState(
@@ -41,17 +41,46 @@ class LineTool(
         val layer = state.activeLayer ?: return currentState
 
         // 현재 라인의 픽셀 계산
-        val linePixels = bresenhamLine(currentState.startPoint, point)
+        val linePixels = ToolUtils.interpolatePixels(currentState.startPoint, point)
 
-        // 새로 영향받는 픽셀의 이전 색상 저장 (중복 제외)
-        val newAffectedPixels = linePixels
-            .filter { layer.isInBounds(it.x, it.y) }
-            .filter { p -> currentState.affectedPixels.none { it.first == p } }
-            .map { p -> p to layer.getPixel(p.x, p.y) }
+        // 새로 영향받는 픽셀의 이전 색상 저장
+        val currentAffected = currentState.affectedPixels
+        val newAffectedList = IntArray(linePixels.size * 3)
+        var count = 0
+
+        for (p in linePixels) {
+            if (layer.isInBounds(p.x, p.y)) {
+                // Check if already affected
+                var exists = false
+                var i = 0
+                while (i < currentAffected.size) {
+                    if (currentAffected[i] == p.x && currentAffected[i + 1] == p.y) {
+                        exists = true
+                        break
+                    }
+                    i += 3
+                }
+                
+                if (!exists) {
+                    newAffectedList[count++] = p.x
+                    newAffectedList[count++] = p.y
+                    newAffectedList[count++] = layer.getPixel(p.x, p.y)
+                }
+            }
+        }
+
+        val combined = if (count > 0) {
+            val result = IntArray(currentAffected.size + count)
+            currentAffected.copyInto(result, 0, 0, currentAffected.size)
+            newAffectedList.copyInto(result, currentAffected.size, 0, count)
+            result
+        } else {
+            currentAffected
+        }
 
         return currentState.copy(
             currentPoint = point,
-            affectedPixels = currentState.affectedPixels + newAffectedPixels
+            affectedPixels = combined
         )
     }
 
@@ -60,95 +89,47 @@ class LineTool(
         val layerId = state.activeLayerId ?: return null
 
         // 최종 직선 픽셀 계산
-        val centerPixels = bresenhamLine(finalState.startPoint, point)
+        val centerPixels = ToolUtils.interpolatePixels(finalState.startPoint, point)
 
         // 각 중심 픽셀을 선 두께만큼 확장
-        val allPixels = centerPixels.flatMap { expandPoint(it) }.distinct()
+        val allPixels = centerPixels.flatMap { ToolUtils.expandPoint(it, size) }.distinct()
 
         // 각 픽셀에 대한 DrawPixelCommand 생성
-        val commands = allPixels.mapNotNull { pixel ->
-            val previousColor = finalState.affectedPixels.find { it.first == pixel }?.second
-                ?: state.activeLayer?.getPixel(pixel.x, pixel.y)
+
+        if (allPixels.isEmpty()) return null
+
+        // DrawPixelsCommand용 픽셀 데이터 생성
+        val pixelData = IntArray(allPixels.size * 3)
+        var pixelDataIdx = 0
+
+        for (pixel in allPixels) {
             if (state.activeLayer?.isInBounds(pixel.x, pixel.y) == true) {
-                DrawPixelCommand(layerId, pixel.x, pixel.y, color, previousColor)
-            } else {
-                null
+                // 현재 픽셀 데이터 추가
+                pixelData[pixelDataIdx++] = pixel.x
+                pixelData[pixelDataIdx++] = pixel.y
+                pixelData[pixelDataIdx++] = color
             }
         }
 
-        return if (commands.isEmpty()) null else CompositeCommand(commands)
+        // 실제 추가된 픽셀 수에 맞게 배열 크기 조정
+        val finalPixelData = if (pixelDataIdx < pixelData.size) {
+            pixelData.copyOf(pixelDataIdx)
+        } else {
+            pixelData
+        }
+
+        if (finalPixelData.isEmpty()) return null
+
+        return DrawPixelsCommand(layerId, finalPixelData)
     }
 
     override fun getPreviewPixels(toolState: ToolState?): List<Pair<Point, Int>> {
         val state = toolState as? DefaultToolState ?: return emptyList()
-        val centerPixels = bresenhamLine(state.startPoint, state.currentPoint)
+        val centerPixels = ToolUtils.interpolatePixels(state.startPoint, state.currentPoint)
 
         // 각 중심 픽셀을 선 두께만큼 확장
-        val allPixels = centerPixels.flatMap { expandPoint(it) }.distinct()
+        val allPixels = centerPixels.flatMap { ToolUtils.expandPoint(it, size) }.distinct()
 
         return allPixels.map { it to state.color }
-    }
-
-    /**
-     * Bresenham의 직선 알고리즘
-     * 두 점 사이의 픽셀 완벽한 직선을 계산합니다.
-     *
-     * 특징:
-     * - 정수 연산만 사용 (부동소수점 연산 없음)
-     * - 빠르고 효율적
-     * - 픽셀 완벽한 직선 생성
-     */
-    private fun bresenhamLine(from: Point, to: Point): List<Point> {
-        if (from == to) return listOf(from)
-
-        val pixels = mutableListOf<Point>()
-        var x0 = from.x
-        var y0 = from.y
-        val x1 = to.x
-        val y1 = to.y
-
-        val dx = kotlin.math.abs(x1 - x0)
-        val dy = kotlin.math.abs(y1 - y0)
-        val sx = if (x0 < x1) 1 else -1
-        val sy = if (y0 < y1) 1 else -1
-        var err = dx - dy
-
-        while (true) {
-            pixels.add(Point(x0, y0))
-            if (x0 == x1 && y0 == y1) break
-
-            val e2 = 2 * err
-            if (e2 > -dy) {
-                err -= dy
-                x0 += sx
-            }
-            if (e2 < dx) {
-                err += dx
-                y0 += sy
-            }
-        }
-
-        return pixels
-    }
-
-    /**
-     * 단일 포인트를 선 두께에 따라 확장
-     * size=1: 1x1 (단일 픽셀)
-     * size=2: 3x3 (radius 1)
-     * size=3: 5x5 (radius 2)
-     */
-    private fun expandPoint(center: Point): List<Point> {
-        if (size <= 1) return listOf(center)
-
-        val radius = size - 1
-        val pixels = mutableListOf<Point>()
-
-        for (dy in -radius..radius) {
-            for (dx in -radius..radius) {
-                pixels.add(Point(center.x + dx, center.y + dy))
-            }
-        }
-
-        return pixels
     }
 }

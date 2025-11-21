@@ -81,8 +81,9 @@ interface ToolState {
 
     /**
      * 영향받은 픽셀 (undo를 위한 백업)
+     * 포맷: [x, y, oldColor, x, y, oldColor, ...]
      */
-    val affectedPixels: List<Pair<Point, Int>>
+    val affectedPixels: IntArray
 }
 
 /**
@@ -92,8 +93,30 @@ data class DefaultToolState(
     override val startPoint: Point,
     override val currentPoint: Point,
     override val color: Int,
-    override val affectedPixels: List<Pair<Point, Int>> = emptyList()
-) : ToolState
+    override val affectedPixels: IntArray = IntArray(0)
+) : ToolState {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || this::class != other::class) return false
+
+        other as DefaultToolState
+
+        if (startPoint != other.startPoint) return false
+        if (currentPoint != other.currentPoint) return false
+        if (color != other.color) return false
+        if (!affectedPixels.contentEquals(other.affectedPixels)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = startPoint.hashCode()
+        result = 31 * result + currentPoint.hashCode()
+        result = 31 * result + color
+        result = 31 * result + affectedPixels.contentHashCode()
+        return result
+    }
+}
 
 /**
  * 도구 타입 열거형

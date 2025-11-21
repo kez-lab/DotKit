@@ -70,37 +70,91 @@ data class DrawPixelCommand(
  * 다수 픽셀 그리기 명령
  *  배치 픽셀 변경 1건으로 기록
  */
+/**
+ * 다수 픽셀 그리기 명령 (배치 처리)
+ * IntArray 포맷: [x, y, color, x, y, color, ...]
+ */
 class DrawPixelsCommand(
     private val layerId: String,
-    private val paints: List<PixelPaint> // (x, y, newColor)
+    private val pixelData: IntArray // [x, y, color, ...]
 ) : CanvasCommand {
-    data class PixelPaint(val x: Int, val y: Int, val color: Int)
+    // Undo를 위한 백업 데이터: [x, y, oldColor, ...]
     private var backups: IntArray? = null
 
     override fun execute(state: DotKitState): DotKitState {
         val layer = state.layerManager.findLayer(layerId) ?: return state
-        val w = layer.width; val h = layer.height
-        val old = IntArray(paints.size) { i ->
-            val p = paints[i]; if (p.x in 0 until w && p.y in 0 until h) layer.getPixel(p.x, p.y) else 0
-        }
-        backups = old
-        return state.updateLayer(layerId) { l ->
-            l.copy().also { nl ->
-                paints.forEach { p -> if (p.x in 0 until w && p.y in 0 until h) nl.setPixel(p.x, p.y, p.color) }
+        
+        // 백업 데이터 생성 (첫 실행 시에만)
+        if (backups == null) {
+            val newBackups = IntArray(pixelData.size)
+            var i = 0
+            while (i < pixelData.size) {
+                val x = pixelData[i]
+                val y = pixelData[i+1]
+                // color is at i+2, but we need old color from layer
+                
+                newBackups[i] = x
+                newBackups[i+1] = y
+                newBackups[i+2] = if (layer.isInBounds(x, y)) layer.getPixel(x, y) else 0
+                
+                i += 3
             }
+            backups = newBackups
         }
-    }
-    override fun undo(state: DotKitState): DotKitState {
-        val layer = state.layerManager.findLayer(layerId) ?: return state
-        val old = backups ?: return state
-        val w = layer.width; val h = layer.height
+
         return state.updateLayer(layerId) { l ->
             l.copy().also { nl ->
-                paints.forEachIndexed { i, p ->
-                    if (p.x in 0 until w && p.y in 0 until h) nl.setPixel(p.x, p.y, old[i])
+                var i = 0
+                while (i < pixelData.size) {
+                    val x = pixelData[i]
+                    val y = pixelData[i+1]
+                    val color = pixelData[i+2]
+                    
+                    if (nl.isInBounds(x, y)) {
+                        nl.setPixel(x, y, color)
+                    }
+                    i += 3
                 }
             }
         }
+    }
+
+    override fun undo(state: DotKitState): DotKitState {
+        val old = backups ?: return state
+        
+        return state.updateLayer(layerId) { l ->
+            l.copy().also { nl ->
+                var i = 0
+                while (i < old.size) {
+                    val x = old[i]
+                    val y = old[i+1]
+                    val oldColor = old[i+2]
+                    
+                    if (nl.isInBounds(x, y)) {
+                        nl.setPixel(x, y, oldColor)
+                    }
+                    i += 3
+                }
+            }
+        }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || this::class != other::class) return false
+
+        other as DrawPixelsCommand
+
+        if (layerId != other.layerId) return false
+        if (!pixelData.contentEquals(other.pixelData)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = layerId.hashCode()
+        result = 31 * result + pixelData.contentHashCode()
+        return result
     }
 }
 
@@ -112,24 +166,31 @@ data class DrawLineCommand(
     val layerId: String,
     val from: Point,
     val to: Point,
-    val color: Int,
-    private val affectedPixels: List<Pair<Point, Int>>? = null
+    val color: Int
 ) : CanvasCommand {
+    // [x1, y1, oldColor1, x2, y2, oldColor2, ...]
+    private var affectedPixels: IntArray? = null
+
     override fun execute(state: DotKitState): DotKitState {
         val layer = state.layerManager.findLayer(layerId) ?: return state
 
         // Bresenham 알고리즘으로 라인상의 모든 픽셀 계산
         val pixels = getLinePixels(from, to)
 
-        // 이전 색상 저장
-        val affected = if (affectedPixels == null) {
-            pixels.filter { layer.isInBounds(it.x, it.y) }
-                .map { point -> point to layer.getPixel(point.x, point.y) }
-        } else {
-            affectedPixels
+        // 이전 색상 저장 (첫 실행 시에만)
+        if (affectedPixels == null) {
+            val validPixels = pixels.filter { layer.isInBounds(it.x, it.y) }
+            val arr = IntArray(validPixels.size * 3)
+            var idx = 0
+            validPixels.forEach { point ->
+                arr[idx++] = point.x
+                arr[idx++] = point.y
+                arr[idx++] = layer.getPixel(point.x, point.y)
+            }
+            affectedPixels = arr
         }
 
-        val newState = state.updateLayer(layerId) { layer ->
+        return state.updateLayer(layerId) { layer ->
             layer.copy().also { newLayer ->
                 pixels.forEach { point ->
                     if (newLayer.isInBounds(point.x, point.y)) {
@@ -138,24 +199,20 @@ data class DrawLineCommand(
                 }
             }
         }
-
-        return if (affectedPixels == null) {
-            // 첫 실행시 영향받은 픽셀 저장
-            copy(affectedPixels = affected)
-            newState
-        } else {
-            newState
-        }
     }
 
     override fun undo(state: DotKitState): DotKitState {
-        if (affectedPixels == null) return state
+        val affected = affectedPixels ?: return state
 
         return state.updateLayer(layerId) { layer ->
             layer.copy().also { newLayer ->
-                affectedPixels.forEach { (point, previousColor) ->
-                    if (newLayer.isInBounds(point.x, point.y)) {
-                        newLayer.setPixel(point.x, point.y, previousColor)
+                var i = 0
+                while (i < affected.size) {
+                    val x = affected[i++]
+                    val y = affected[i++]
+                    val oldColor = affected[i++]
+                    if (newLayer.isInBounds(x, y)) {
+                        newLayer.setPixel(x, y, oldColor)
                     }
                 }
             }
@@ -196,6 +253,35 @@ data class DrawLineCommand(
         }
 
         return pixels
+    }
+    
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || this::class != other::class) return false
+
+        other as DrawLineCommand
+
+        if (layerId != other.layerId) return false
+        if (from != other.from) return false
+        if (to != other.to) return false
+        if (color != other.color) return false
+        // affectedPixels is internal state, usually not part of equality for command identity
+        // but if we want strict state equality:
+        if (affectedPixels != null) {
+             if (other.affectedPixels == null) return false
+             if (!affectedPixels.contentEquals(other.affectedPixels)) return false
+        } else if (other.affectedPixels != null) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = layerId.hashCode()
+        result = 31 * result + from.hashCode()
+        result = 31 * result + to.hashCode()
+        result = 31 * result + color
+        result = 31 * result + (affectedPixels?.contentHashCode() ?: 0)
+        return result
     }
 }
 
@@ -292,5 +378,65 @@ data class CompositeCommand(
         return commands.reversed().fold(state) { currentState, command ->
             command.undo(currentState)
         }
+    }
+}
+
+/**
+ * Fill 커맨드 (Flood Fill)
+ * 연결된 영역을 채웁니다.
+ */
+data class FillCommand(
+    val layerId: String,
+    // [x, y, oldColor, x, y, oldColor, ...]
+    val affectedPixels: IntArray, 
+    val fillColor: Int
+) : CanvasCommand {
+    override fun execute(state: DotKitState): DotKitState {
+        return state.updateLayer(layerId) { layer ->
+            layer.copy().also { newLayer ->
+                var i = 0
+                while (i < affectedPixels.size) {
+                    val x = affectedPixels[i++]
+                    val y = affectedPixels[i++]
+                    // Skip color (i++) as we are filling with new color
+                    i++ // skip oldColor
+                    newLayer.setPixel(x, y, fillColor)
+                }
+            }
+        }
+    }
+
+    override fun undo(state: DotKitState): DotKitState {
+        return state.updateLayer(layerId) { layer ->
+            layer.copy().also { newLayer ->
+                var i = 0
+                while (i < affectedPixels.size) {
+                    val x = affectedPixels[i++]
+                    val y = affectedPixels[i++]
+                    val previousColor = affectedPixels[i++]
+                    newLayer.setPixel(x, y, previousColor)
+                }
+            }
+        }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || this::class != other::class) return false
+
+        other as FillCommand
+
+        if (layerId != other.layerId) return false
+        if (!affectedPixels.contentEquals(other.affectedPixels)) return false
+        if (fillColor != other.fillColor) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = layerId.hashCode()
+        result = 31 * result + affectedPixels.contentHashCode()
+        result = 31 * result + fillColor
+        return result
     }
 }
